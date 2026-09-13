@@ -1,0 +1,7 @@
+student_id,student_name,course_code,credits,has_prereqs,override_code
+1001,Alice Smith,COP4932,3,True,NONE
+1002,Bob Jones,COP4934,4,False,NONE
+1003,Charlie Brown,PHY2048,4,False,DEAN_APPROVED
+1001,Alice Smith,COP4935,3,True,NONE
+1004,Diana Prince,MAC2311,4,True,NONE
+1001,Alice Smith,LIT1000,15,True,NONE
