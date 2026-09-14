@@ -2,6 +2,7 @@ from datetime import datetime
 
 from infrastructure.sqlite_enrollment_repository import EnrollmentRepository
 from infrastructure.csv_enrollment_reader import read_enrollment_rows
+from infrastructure.console_email_notifier import send_notification
 
 # HARDCODED GLOBALS (unchanged from legacy_enrollment_processor.py)
 DB_PATH = "university_enrollment.db"
@@ -38,19 +39,20 @@ def run_legacy_enrollment():
 
         if current_credits + credits > MAX_CREDITS:
             status = "FAILED - CREDIT LIMIT EXCEEDED"
-            # SIMULATED EMAIL (unchanged)
-            print(f"SENDING EMAIL TO: {student_name} -> Registration failed for {course_code} (Credit limit).")
+            # SIMULATED EMAIL -- message text still built here; only the
+            # "sending" side effect is now delegated to send_notification.
+            send_notification(f"SENDING EMAIL TO: {student_name} -> Registration failed for {course_code} (Credit limit).")
         else:
             if has_prereqs:
                 status = "ENROLLED"
-                print(f"SENDING EMAIL TO: {student_name} -> Successfully enrolled in {course_code}.")
+                send_notification(f"SENDING EMAIL TO: {student_name} -> Successfully enrolled in {course_code}.")
             else:
                 if override_code == "DEAN_APPROVED":
                     status = "ENROLLED (OVERRIDE)"
-                    print(f"SENDING EMAIL TO: {student_name} -> Enrolled in {course_code} with Dean override.")
+                    send_notification(f"SENDING EMAIL TO: {student_name} -> Enrolled in {course_code} with Dean override.")
                 else:
                     status = "FAILED - MISSING PREREQS"
-                    print(f"SENDING EMAIL TO: {student_name} -> Registration failed for {course_code} (Missing Prereqs).")
+                    send_notification(f"SENDING EMAIL TO: {student_name} -> Registration failed for {course_code} (Missing Prereqs).")
 
         # 6. DATABASE EXECUTION -- now delegated to EnrollmentRepository.
         repository.save_result(student_id, student_name, course_code, credits, status)

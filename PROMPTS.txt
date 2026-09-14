@@ -155,3 +155,237 @@ List the exact behaviors that must remain unchanged.
 
 Do not implement the refactor yet.
 Do not modify the legacy source file.
+
+---------
+prompt 3
+---------
+ROLE
+
+Act as a Senior Python Engineer performing a surgical, incremental refactor of a legacy application.
+
+INSTRUCTION
+
+Extract ONLY the SQLite database responsibility from legacy_enrollment_processor.py into infrastructure/sqlite_enrollment_repository.py.
+
+Do not refactor, redesign, or modify any other responsibility yet.
+
+Create an EnrollmentRepository class that encapsulates the existing SQLite operations.
+
+The repository must be responsible for:
+
+1. Opening the SQLite database connection.
+2. Creating the enrollments table if it does not already exist.
+3. Retrieving the current enrolled credits for a student.
+4. Inserting an enrollment result into the database.
+5. Committing the transaction.
+6. Closing the database connection.
+
+Preserve the existing SQLite schema and SQL behavior exactly.
+
+The repository must not:
+- Read CSV files.
+- Apply prerequisite rules.
+- Apply credit-limit rules.
+- Determine enrollment status.
+- Generate HTML.
+- Generate notification messages.
+- Print email notifications.
+
+Do not change the legacy business behavior.
+
+Do not refactor the entire application in this step.
+
+CONTEXT
+
+The current legacy_enrollment_processor.py contains all database operations inside run_legacy_enrollment().
+
+The database path is:
+
+"university_enrollment.db"
+
+The existing table is:
+
+enrollments(
+    student_id TEXT,
+    student_name TEXT,
+    course_code TEXT,
+    credits INTEGER,
+    status TEXT
+)
+
+The existing program creates the table with CREATE TABLE IF NOT EXISTS.
+
+For each enrollment request, it calculates the student's currently enrolled credits using:
+
+SELECT SUM(credits)
+FROM enrollments
+WHERE student_id=?
+AND status='ENROLLED'
+
+If the query returns no value, the legacy program uses 0.
+
+The legacy program inserts every enrollment result into the database using:
+
+INSERT INTO enrollments VALUES (?, ?, ?, ?, ?)
+
+The transaction is committed after processing all rows and the connection is then closed.
+
+The original legacy file is the behavioral source of truth.
+
+EXPECTED OUTPUT
+
+Create:
+
+infrastructure/sqlite_enrollment_repository.py
+
+Implement a focused EnrollmentRepository class.
+
+The class should expose clear methods corresponding to the database responsibilities described above.
+
+Update the refactored application only as much as necessary to demonstrate that the extracted database component works.
+
+Do not yet extract CSV parsing, domain/business logic, notification behavior, HTML generation, or application orchestration.
+
+After making the change, explain:
+1. Which database code was extracted.
+2. Where it was moved.
+3. What remains in the legacy file.
+4. Why the new repository is independent of business logic and presentation.
+
+-----
+prompt 4
+-----
+ROLE
+
+Act as a Senior Python Engineer performing a surgical, incremental refactor of a legacy application.
+
+INSTRUCTION
+
+Extract ONLY the CSV reading responsibility from main.py into infrastructure/csv_enrollment_reader.py.
+
+Do not refactor, redesign, or modify any other responsibility yet.
+
+Create a function (or small set of functions) that encapsulates the existing CSV file-existence check, file opening, header skip, and row parsing.
+
+The reader must be responsible for:
+
+Checking whether the CSV file exists at the given path.
+Opening and reading the CSV file.
+Skipping the header row.
+Parsing each row into its individual fields (student_id, student_name, course_code, credits, has_prereqs, override_code), including the existing type conversions (int(row[3]) and the row[4].strip().lower() == 'true' boolean check).
+Returning the parsed rows in a form main.py can iterate over.
+Preserve the existing CSV parsing behavior exactly, including the "file not found" signal that main.py currently handles by printing ERROR: CSV file not found! and returning early.
+
+The reader must not:
+
+Open or query the SQLite database.
+Apply prerequisite rules.
+Apply credit-limit rules.
+Determine enrollment status.
+Generate HTML.
+Generate or print notification messages.
+Do not change the legacy business behavior.
+
+Do not refactor the entire application in this step.
+
+CONTEXT
+
+main.py currently contains the CSV file-existence check, file opening, and row-by-row parsing inline inside run_legacy_enrollment(), sourced from legacy_enrollment_processor.py:23-38.
+
+The CSV path is:
+
+"students.csv"
+
+Each data row (after the header) has six columns in this order:
+student_id, student_name, course_code, credits, has_prereqs, override_code
+
+The legacy program checks for the file's existence with os.path.exists(CSV_PATH) before opening it, and prints "ERROR: CSV file not found!" and returns immediately if it is missing.
+
+The EnrollmentRepository extraction from the previous step is already in place in infrastructure/sqlite_enrollment_repository.py and is being called from main.py. This step should follow the same pattern: extract one responsibility, wire main.py to use it, and leave every other responsibility (business logic, notifications, HTML generation) untouched and inline.
+
+The original legacy_enrollment_processor.py is the behavioral source of truth and must not be modified.
+
+EXPECTED OUTPUT
+
+Create:
+
+infrastructure/csv_enrollment_reader.py
+
+Implement a focused CSV reading function (or functions).
+
+Update main.py only as much as necessary to use the extracted CSV reader in place of the inline file-reading code, preserving identical control flow (including the missing-file early exit).
+
+Do not yet extract domain/business logic, notification behavior, HTML generation, or application orchestration.
+
+After making the change, explain:
+
+Which CSV code was extracted.
+Where it was moved.
+What remains inline in main.py.
+Why the new reader is independent of business logic, database access, and presentation.
+
+--
+prompt 5
+--
+
+ROLE
+
+Act as a Senior Python Engineer performing a surgical, incremental refactor of a legacy application.
+
+INSTRUCTION
+
+Extract ONLY the simulated email notification responsibility from main.py into infrastructure/console_email_notifier.py.
+
+Do not refactor, redesign, or modify any other responsibility yet.
+
+Create a function that encapsulates the existing "sending an email" side effect — currently four print(f"SENDING EMAIL TO: ...") statements embedded directly inside the business-rule branches.
+
+The notifier must be responsible for:
+
+Accepting an already-formed message string.
+"Sending" it — for now, printing it to the console exactly as the legacy program does.
+Preserve the exact message text and formatting for all four cases (credit limit failure, successful enrollment, Dean override enrollment, missing-prereqs failure) — do not alter wording, punctuation, or the student_name/course_code interpolation.
+
+The notifier must not:
+
+Decide what message to send (that message-construction logic should stay in main.py for this step — do not extract it into a domain module yet).
+Open or query the SQLite database.
+Apply prerequisite rules.
+Apply credit-limit rules.
+Determine enrollment status.
+Read or parse CSV.
+Generate HTML.
+Do not change the legacy business behavior.
+
+Do not refactor the entire application in this step.
+
+CONTEXT
+
+main.py currently contains four inline print(f"SENDING EMAIL TO: {student_name} -> ...") calls, one inside each branch of the credit-limit/prerequisite/override decision (mirroring legacy_enrollment_processor.py:51,55,59,62):
+
+f"SENDING EMAIL TO: {student_name} -> Registration failed for {course_code} (Credit limit)."
+f"SENDING EMAIL TO: {student_name} -> Successfully enrolled in {course_code}."
+f"SENDING EMAIL TO: {student_name} -> Enrolled in {course_code} with Dean override."
+f"SENDING EMAIL TO: {student_name} -> Registration failed for {course_code} (Missing Prereqs)."
+The two previous extractions (infrastructure/sqlite_enrollment_repository.py for the database, infrastructure/csv_enrollment_reader.py for CSV reading) are already in place and wired into main.py. This step follows the same pattern: extract one responsibility, wire main.py to use it, and leave every other responsibility (business logic, HTML generation, message-text construction) untouched and inline.
+
+The original legacy_enrollment_processor.py is the behavioral source of truth and must not be modified.
+
+EXPECTED OUTPUT
+
+Create:
+
+infrastructure/console_email_notifier.py
+
+Implement a focused notification-sending function (e.g. send_notification(message)).
+
+Update main.py only as much as necessary: keep each branch building its own message string exactly as today, but replace the bare print(...) call with a call to the extracted notifier function.
+
+Do not yet extract domain/business logic, message-text construction, HTML generation, or application orchestration.
+
+After making the change, explain:
+
+Which notification code was extracted.
+Where it was moved.
+What remains inline in main.py.
+Why the new notifier is independent of business logic, database access, CSV parsing, and presentation.
