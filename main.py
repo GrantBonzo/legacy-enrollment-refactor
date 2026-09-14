@@ -3,11 +3,11 @@ from datetime import datetime
 from infrastructure.sqlite_enrollment_repository import EnrollmentRepository
 from infrastructure.csv_enrollment_reader import read_enrollment_rows
 from infrastructure.console_email_notifier import send_notification
+from domain.enrollment_rules import determine_status
 
 # HARDCODED GLOBALS (unchanged from legacy_enrollment_processor.py)
 DB_PATH = "university_enrollment.db"
 CSV_PATH = "students.csv"
-MAX_CREDITS = 18
 
 
 def run_legacy_enrollment():
@@ -31,28 +31,22 @@ def run_legacy_enrollment():
     # 4. THE GOD LOOP (unchanged, except CSV parsing and DB calls now go
     # through the extracted reader and repository)
     for student_id, student_name, course_code, credits, has_prereqs, override_code in rows:
-        status = "PENDING"
-
-        # 5. BUSINESS LOGIC (unchanged)
+        # 5. BUSINESS LOGIC -- status decision now delegated to determine_status().
         # Check if student already has too many credits
         current_credits = repository.get_current_enrolled_credits(student_id)
 
-        if current_credits + credits > MAX_CREDITS:
-            status = "FAILED - CREDIT LIMIT EXCEEDED"
-            # SIMULATED EMAIL -- message text still built here; only the
-            # "sending" side effect is now delegated to send_notification.
+        status = determine_status(current_credits, credits, has_prereqs, override_code)
+
+        # SIMULATED EMAIL (unchanged) -- message text is still built here,
+        # keyed off the status returned by the domain rule.
+        if status == "FAILED - CREDIT LIMIT EXCEEDED":
             send_notification(f"SENDING EMAIL TO: {student_name} -> Registration failed for {course_code} (Credit limit).")
+        elif status == "ENROLLED":
+            send_notification(f"SENDING EMAIL TO: {student_name} -> Successfully enrolled in {course_code}.")
+        elif status == "ENROLLED (OVERRIDE)":
+            send_notification(f"SENDING EMAIL TO: {student_name} -> Enrolled in {course_code} with Dean override.")
         else:
-            if has_prereqs:
-                status = "ENROLLED"
-                send_notification(f"SENDING EMAIL TO: {student_name} -> Successfully enrolled in {course_code}.")
-            else:
-                if override_code == "DEAN_APPROVED":
-                    status = "ENROLLED (OVERRIDE)"
-                    send_notification(f"SENDING EMAIL TO: {student_name} -> Enrolled in {course_code} with Dean override.")
-                else:
-                    status = "FAILED - MISSING PREREQS"
-                    send_notification(f"SENDING EMAIL TO: {student_name} -> Registration failed for {course_code} (Missing Prereqs).")
+            send_notification(f"SENDING EMAIL TO: {student_name} -> Registration failed for {course_code} (Missing Prereqs).")
 
         # 6. DATABASE EXECUTION -- now delegated to EnrollmentRepository.
         repository.save_result(student_id, student_name, course_code, credits, status)
