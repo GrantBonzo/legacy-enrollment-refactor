@@ -1,10 +1,9 @@
-from datetime import datetime
-
 from infrastructure.sqlite_enrollment_repository import EnrollmentRepository
 from infrastructure.csv_enrollment_reader import read_enrollment_rows
 from infrastructure.console_email_notifier import send_notification
 from domain.enrollment_rules import determine_status
 from domain.notifications import build_notification_message
+from presentation.html_report_builder import HtmlReportBuilder
 
 # HARDCODED GLOBALS (unchanged from legacy_enrollment_processor.py)
 DB_PATH = "university_enrollment.db"
@@ -19,9 +18,9 @@ def run_legacy_enrollment():
     repository = EnrollmentRepository(DB_PATH)
     repository.create_schema()
 
-    # 2. HTML REPORT SETUP (unchanged)
-    html_report = f"<html><body><h1>Enrollment Run: {datetime.now()}</h1><table border='1'>"
-    html_report += "<tr><th>ID</th><th>Name</th><th>Course</th><th>Status</th></tr>"
+    # 2. HTML REPORT SETUP -- now delegated to HtmlReportBuilder.
+    report_builder = HtmlReportBuilder()
+    report_builder.start()
 
     # 3. FILE I/O -- now delegated to read_enrollment_rows().
     rows = read_enrollment_rows(CSV_PATH)
@@ -47,20 +46,14 @@ def run_legacy_enrollment():
         # 6. DATABASE EXECUTION -- now delegated to EnrollmentRepository.
         repository.save_result(student_id, student_name, course_code, credits, status)
 
-        # 7. HTML GENERATION (unchanged)
-        if "FAILED" in status:
-            html_report += f"<tr style='color:red;'><td>{student_id}</td><td>{student_name}</td><td>{course_code}</td><td>{status}</td></tr>"
-        else:
-            html_report += f"<tr><td>{student_id}</td><td>{student_name}</td><td>{course_code}</td><td>{status}</td></tr>"
+        # 7. HTML GENERATION -- now delegated to HtmlReportBuilder.
+        report_builder.add_result(student_id, student_name, course_code, status)
 
     # 8. TEARDOWN AND SAVING -- now delegated to EnrollmentRepository.
     repository.commit()
     repository.close()
 
-    html_report += "</table></body></html>"
-
-    with open("enrollment_report.html", "w") as report_file:
-        report_file.write(html_report)
+    report_builder.write("enrollment_report.html")
 
     print("Enrollment processing complete. Report generated.")
 
