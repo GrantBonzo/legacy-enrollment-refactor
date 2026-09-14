@@ -4,6 +4,7 @@ from infrastructure.sqlite_enrollment_repository import EnrollmentRepository
 from infrastructure.csv_enrollment_reader import read_enrollment_rows
 from infrastructure.console_email_notifier import send_notification
 from domain.enrollment_rules import determine_status
+from domain.notifications import build_notification_message
 
 # HARDCODED GLOBALS (unchanged from legacy_enrollment_processor.py)
 DB_PATH = "university_enrollment.db"
@@ -37,16 +38,11 @@ def run_legacy_enrollment():
 
         status = determine_status(current_credits, credits, has_prereqs, override_code)
 
-        # SIMULATED EMAIL (unchanged) -- message text is still built here,
-        # keyed off the status returned by the domain rule.
-        if status == "FAILED - CREDIT LIMIT EXCEEDED":
-            send_notification(f"SENDING EMAIL TO: {student_name} -> Registration failed for {course_code} (Credit limit).")
-        elif status == "ENROLLED":
-            send_notification(f"SENDING EMAIL TO: {student_name} -> Successfully enrolled in {course_code}.")
-        elif status == "ENROLLED (OVERRIDE)":
-            send_notification(f"SENDING EMAIL TO: {student_name} -> Enrolled in {course_code} with Dean override.")
-        else:
-            send_notification(f"SENDING EMAIL TO: {student_name} -> Registration failed for {course_code} (Missing Prereqs).")
+        # SIMULATED EMAIL -- message text now delegated to
+        # build_notification_message(); only the "sending" side effect
+        # goes through send_notification().
+        message = build_notification_message(student_name, course_code, status)
+        send_notification(message)
 
         # 6. DATABASE EXECUTION -- now delegated to EnrollmentRepository.
         repository.save_result(student_id, student_name, course_code, credits, status)
