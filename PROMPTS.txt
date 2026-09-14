@@ -1,0 +1,157 @@
+===============================
+PROMPT 1 - AI CATOGRAPHER
+===============================
+ROLE
+
+Act as a Senior Systems Architect performing a code archaeology and architecture assessment of a legacy Python application.
+
+INSTRUCTION
+
+Analyze the provided legacy_enrollment_processor.py without modifying, rewriting, or refactoring any source code.
+
+Trace the program from its entry point through completion. Identify what happens at each stage, including file input, database operations, business rules, side effects, and report generation.
+
+Explicitly identify at least three architectural/code smells present in the existing implementation. For each smell, explain:
+1. Where it occurs in the code.
+2. Why it is a problem.
+3. What architectural responsibility is incorrectly combined.
+4. What kind of change would eventually address the smell, without implementing that change yet.
+
+Pay particular attention to separation of concerns, coupling, global state, database access, business logic, presentation logic, error handling, and side effects.
+
+Do not invent behavior that is not present in the source code. Base the analysis strictly on the provided file.
+
+CONTEXT
+
+The application is a legacy student enrollment processor.
+
+The current program:
+- Reads enrollment requests from students.csv.
+- Uses SQLite to store enrollment records.
+- Checks the student's current enrolled credits.
+- Enforces an 18-credit maximum.
+- Checks prerequisite status and Dean overrides.
+- Prints simulated email notifications.
+- Generates an HTML enrollment report.
+
+The goal of the assignment is to eventually refactor this monolithic application into a Clean Architecture with Domain, Infrastructure/Data, and Presentation layers while preserving its external behavior.
+
+The source file is legacy_enrollment_processor.py.
+
+EXPECTED OUTPUT
+
+Create a Markdown document named ARCHITECTURE.md.
+
+Structure it as:
+
+# Legacy Enrollment Processor Architecture
+
+## 1. Current Execution Flow
+Provide a numbered, step-by-step execution flow from program startup to completion.
+
+## 2. Responsibilities Currently Contained in the Monolith
+List every major responsibility currently handled by the program.
+
+## 3. Architectural and Code Smells
+Identify at least three concrete smells from the source code. Include:
+- Smell name
+- Location
+- Evidence
+- Why it is problematic
+- Architectural consequence
+
+## 4. Current Dependencies
+Explain which parts depend directly on SQLite, CSV files, HTML generation, and console/email output.
+
+## 5. Refactoring Constraints
+State what behavior must remain unchanged during the future refactoring.
+
+Do not modify legacy_enrollment_processor.py.
+
+
+==================================================
+PROMPT 2 — CLEAN ARCHITECTURE BLUEPRINT
+==================================================
+
+ROLE
+
+Act as a Senior Software Architect specializing in Clean Architecture and incremental legacy-code refactoring.
+
+INSTRUCTION
+
+Using the previously created ARCHITECTURE.md and the original legacy_enrollment_processor.py, design a modular architecture for the application.
+
+Do not write the implementation code yet.
+
+Separate responsibilities into exactly three major layers:
+
+1. Domain Layer
+2. Infrastructure/Data Layer
+3. Presentation Layer
+
+Determine which responsibilities from the legacy program belong in each layer.
+
+Design the smallest reasonable set of Python modules needed to separate the responsibilities. Avoid unnecessary abstractions, frameworks, or files.
+
+For each proposed file:
+- Give its path.
+- Explain its single responsibility.
+- List the important classes/functions it should contain.
+- Explain what it should NOT know about.
+
+Pay particular attention to keeping business rules independent from SQLite, CSV, HTML, and simulated email output.
+
+The refactor must preserve the behavior of the original application.
+
+CONTEXT
+
+The legacy application currently performs all of the following inside one main function:
+- SQLite database setup and queries.
+- CSV parsing.
+- Student/course data extraction.
+- Current-credit calculation.
+- 18-credit limit enforcement.
+- Prerequisite checking.
+- Dean override checking.
+- Enrollment status determination.
+- Simulated email notifications.
+- HTML report generation.
+- Program orchestration.
+
+The target architecture must contain:
+- Domain: business rules.
+- Infrastructure/Data: CSV, SQLite, and simulated email.
+- Presentation: HTML report generation.
+- A root main.py that orchestrates the application.
+
+The existing legacy implementation is the source of truth for behavior.
+
+EXPECTED OUTPUT
+
+Create an architectural blueprint containing:
+
+# Proposed Clean Architecture
+
+## Directory Structure
+Show the complete proposed tree.
+
+## Domain Layer
+Explain files, responsibilities, and dependencies.
+
+## Infrastructure/Data Layer
+Explain files, responsibilities, and dependencies.
+
+## Presentation Layer
+Explain files, responsibilities, and dependencies.
+
+## Application Flow
+Show how data should move through the layers.
+
+## Dependency Rules
+State which layer may depend on which other layer.
+
+## Behavior Preservation
+List the exact behaviors that must remain unchanged.
+
+Do not implement the refactor yet.
+Do not modify the legacy source file.
